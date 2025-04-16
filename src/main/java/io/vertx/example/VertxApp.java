@@ -37,25 +37,21 @@ public class VertxApp {
                 // Start sending messages periodically to MainVerticle
                 mainVertx.setPeriodic(MESSAGE_INTERVAL_MS, id -> {
                     logger.info("Sending message to MainVerticle");
-                    mainVertx.eventBus().send("test.address", "test message");
+                    long startTime = System.nanoTime();
+                    mainVertx.eventBus().request("test.address", new JsonObject().put("message", "test message"), reply -> {
+                        long endTime = System.nanoTime();
+                        long durationMs = TimeUnit.NANOSECONDS.toMillis(endTime - startTime);
+                        
+                        if (reply.succeeded()) {
+                            JsonObject response = (JsonObject) reply.result().body();
+                            logger.info("Received response from MainVerticle in {} ms: {}", durationMs, response.getString("response"));
+                        } else {
+                            logger.error("Failed to get response from MainVerticle after {} ms", durationMs, reply.cause());
+                        }
+                    });
                 });
             } else {
                 logger.error("Failed to deploy MainVerticle", res.cause());
-            }
-        });
-
-        // Deploy MainVerticleWithBlocking on second instance
-        blockingVertx.deployVerticle(new MainVerticleWithBlocking(), new DeploymentOptions().setConfig(new JsonObject().put("port", BLOCKING_VERTICLE_PORT)), res -> {
-            if (res.succeeded()) {
-                logger.info("MainVerticleWithBlocking deployed successfully on port {}", BLOCKING_VERTICLE_PORT);
-                
-                // Start sending messages periodically to MainVerticleWithBlocking
-                blockingVertx.setPeriodic(MESSAGE_INTERVAL_MS, id -> {
-                    logger.info("Sending message to MainVerticleWithBlocking");
-                    blockingVertx.eventBus().send("test.address", "test message");
-                });
-            } else {
-                logger.error("Failed to deploy MainVerticleWithBlocking", res.cause());
             }
         });
 
