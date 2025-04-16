@@ -1,0 +1,36 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<configuration>
+    <!-- Appender for MainVerticle -->
+    <appender name="MAIN_VERTICLE" class="ch.qos.logback.core.FileAppender">
+        <file>log1.txt</file>
+        <append>true</append>
+        <encoder>
+            <pattern>%d{HH:mm:ss.SSS} [%thread] %-5level %logger{36} - %msg%n</pattern>
+        </encoder>
+    </appender>
+
+    <!-- Appender for MainVerticleWithBlocking -->
+    <appender name="BLOCKING_VERTICLE" class="ch.qos.logback.core.FileAppender">
+        <file>log2.txt</file>
+        <append>true</append>
+        <encoder>
+            <pattern>%d{HH:mm:ss.SSS} [%thread] %-5level %logger{36} - %msg%n</pattern>
+        </encoder>
+    </appender>
+
+    <!-- Logger for MainVerticle -->
+    <logger name="io.vertx.example.MainVerticle" level="DEBUG" additivity="false">
+        <appender-ref ref="MAIN_VERTICLE" />
+    </logger>
+
+    <!-- Logger for MainVerticleWithBlocking -->
+    <logger name="io.vertx.example.MainVerticleWithBlocking" level="DEBUG" additivity="false">
+        <appender-ref ref="BLOCKING_VERTICLE" />
+    </logger>
+
+    <!-- Root logger -->
+    <root level="INFO">
+        <appender-ref ref="MAIN_VERTICLE" />
+        <appender-ref ref="BLOCKING_VERTICLE" />
+    </root>
+</configuration> 
