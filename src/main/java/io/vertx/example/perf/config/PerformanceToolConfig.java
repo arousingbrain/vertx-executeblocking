@@ -34,7 +34,7 @@ public class PerformanceToolConfig {
     
     // Headers that won't be passed through to target service
     public static final Set<String> RESERVED_HEADERS = new HashSet<>(Arrays.asList(
-        "threads", "rampUpPeriod", "loopCount", "targetUrl"
+        "threads", "rampUpPeriod", "loopCount", "targetUrl", "perf_tool"
     ));
     
     // Default values for parameters

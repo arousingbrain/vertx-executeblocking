@@ -16,8 +16,12 @@ import java.util.concurrent.ThreadPoolExecutor;
 
 /**
  * A performance testing tool for HTTP services using Vert.x.
- * Provides endpoints for initiating load tests and retrieving metrics.
+ * Provides an endpoint for load testing based on headers.
  * Uses OkHttp client for efficient HTTP connections and thread management.
+ * 
+ * The operations are determined by the 'perf_tool' header:
+ * - 'invoke': Initiates a load test
+ * - 'metrics': Retrieves metrics for one or all tests
  */
 public class PerformanceTool extends AbstractVerticle {
     

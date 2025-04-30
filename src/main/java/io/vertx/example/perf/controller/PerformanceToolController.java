@@ -19,6 +19,11 @@ import java.util.UUID;
 public class PerformanceToolController {
     private final LoadTestService loadTestService;
     
+    // Header key that determines the operation to execute
+    private static final String PERF_TOOL_HEADER = "perf_tool";
+    private static final String INVOKE_OPERATION = "invoke";
+    private static final String METRICS_OPERATION = "metrics";
+    
     /**
      * Creates a new controller with the specified services.
      * 
@@ -38,17 +43,41 @@ public class PerformanceToolController {
         // Add body handler for all routes
         router.route().handler(BodyHandler.create());
         
-        // Endpoint to invoke a load test
-        router.post("/invoke").handler(this::handleInvoke);
+        // Single endpoint that handles all operations based on headers
+        router.route("/").handler(this::handleRequest);
+    }
+    
+    /**
+     * Handles all performance tool requests based on the perf_tool header.
+     * 
+     * @param ctx Routing context containing the request
+     */
+    private void handleRequest(RoutingContext ctx) {
+        String operation = ctx.request().getHeader(PERF_TOOL_HEADER);
         
-        // Endpoint to get metrics for a load test
-        router.get("/metrics").handler(this::handleMetrics);
+        if (operation == null || operation.isEmpty()) {
+            sendError(ctx, 400, "Missing required header: " + PERF_TOOL_HEADER);
+            return;
+        }
+        
+        switch (operation.toLowerCase()) {
+            case INVOKE_OPERATION:
+                handleInvoke(ctx);
+                break;
+            case METRICS_OPERATION:
+                handleMetrics(ctx);
+                break;
+            default:
+                sendError(ctx, 400, "Invalid operation: " + operation + ". Valid values are 'invoke' or 'metrics'");
+                break;
+        }
     }
     
     /**
      * Handles load test initiation requests.
      * 
      * Required headers:
+     * - perf_tool: must be set to "invoke"
      * - targetUrl: URL of the service to test (required)
      * - threads: Number of concurrent users/threads (optional, default=1, max=20)
      * - rampUpPeriod: Time in seconds to ramp up threads (optional, default=0, max=3600)
@@ -72,7 +101,8 @@ public class PerformanceToolController {
             MultiMap headers = ctx.request().headers();
             MultiMap forwardHeaders = MultiMap.caseInsensitiveMultiMap();
             headers.forEach(entry -> {
-                if (!PerformanceToolConfig.RESERVED_HEADERS.contains(entry.getKey())) {
+                if (!PerformanceToolConfig.RESERVED_HEADERS.contains(entry.getKey()) && 
+                    !PERF_TOOL_HEADER.equalsIgnoreCase(entry.getKey())) {
                     forwardHeaders.add(entry.getKey(), entry.getValue());
                 }
             });
@@ -127,6 +157,9 @@ public class PerformanceToolController {
     
     /**
      * Handles requests for load test metrics.
+     * 
+     * Required headers:
+     * - perf_tool: must be set to "metrics"
      * 
      * Query parameters:
      * - testId: ID of the specific load test (optional)
