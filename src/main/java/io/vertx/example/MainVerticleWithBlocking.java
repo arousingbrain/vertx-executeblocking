@@ -3,54 +3,70 @@ package io.vertx.example;
 import io.vertx.core.AbstractVerticle;
 import io.vertx.core.Promise;
 import io.vertx.core.json.JsonObject;
+import io.vertx.core.eventbus.Message;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.concurrent.CompletableFuture;
 
+interface IAccountService {
+    String getAccountNumber();
+}
+
 public class MainVerticleWithBlocking extends AbstractVerticle {
     private static final Logger logger = LoggerFactory.getLogger(MainVerticleWithBlocking.class);
     private static final String BUS_ADDRESS = "test.address";
-    private static final long TIMEOUT_MS = 3000;
+    private static final long TIMEOUT_MS = 2000;
 
     @Override
     public void start(Promise<Void> startPromise) {
         // Set up event bus consumer
         vertx.eventBus().consumer(BUS_ADDRESS, message -> {
-            logger.info("Received message, starting blocking operation");
+            logger.info("Received message, starting operation");
             
-            // Execute blocking operation that simulates a hanging SOAP service call
-            vertx.executeBlocking(future -> {
-                try {
-                    logger.info("Simulating MainVerticleWithBlocking service call that never responds...");
-                    AtomicReference<String> soapResponse = new AtomicReference<>("TEST321");
-                    
-                    // Create a future that will be completed by the timer
-                    CompletableFuture<String> timerFuture = new CompletableFuture<>();
-                    
-                    // Set up a timer to complete the future after timeout
-                    vertx.setTimer(TIMEOUT_MS, id -> {
-                        soapResponse.set("TEST123");
-                        timerFuture.complete(soapResponse.get());
-                    });
-                    
-                    // Wait for the timer to complete
-                    String result = timerFuture.get();
-                    future.complete(result);
-                    
-                } catch (Exception e) {
-                    logger.error("Thread interrupted", e);
-                    future.fail(e);
-                }
-            }, false, res -> {
-                if (res.succeeded()) {
-                    message.reply(new JsonObject().put("response", res.result()));
+            try {
+                logger.info("Getting account service...");
+                IAccountService accountService = getAccountService();
+                if (accountService != null) {
+                    // Set up consumer for handle method
+                    vertx.eventBus().consumer(BUS_ADDRESS, this::handle);
                 } else {
-                    logger.error("SOAP service call failed", res.cause());
+                    message.fail(500, "Account service not found");
                 }
-            });
+            } catch (Exception e) {
+                message.fail(500, e.getMessage());
+            }
         });
 
         startPromise.complete();
+    }
+
+    private IAccountService getAccountService() {
+        return new IAccountService() {
+            @Override
+            public String getAccountNumber() {
+                return "TEST123";
+            }
+        };
+    }
+
+    private void handle(Message<JsonObject> msg) {
+        vertx.executeBlocking(performServiceCall(msg), false, handleResponse(msg, asyncResult.result()));
+
+    }
+
+
+    private Handler<Promise<GetSOAPResponseType>> performServiceCall(GetSOAPEntity getSOAPEntity,
+        Message<JsonObject> message) throws Exception {
+
+        return promise -> {
+            try {
+                BindingProvider bindingProvider = (BindingProvider) accountInquiryService;
+                bindingProvider.getRequestContext().put(Header.HEADER_LIST, new HeaderList());
+                promise.complete(accountInquiryService.getAccountInquiry(getSOAPEntity));
+            } catch (Exception e) {
+                promise.fail(e);
+            }
+        };
     }
 } 

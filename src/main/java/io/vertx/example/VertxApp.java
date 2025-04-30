@@ -8,8 +8,9 @@ import java.util.concurrent.TimeUnit;
 
 public class VertxApp {
     private static final Logger logger = LoggerFactory.getLogger(VertxApp.class);
-    private static final int MESSAGE_INTERVAL_MS = 1000; // Send message every second
-    private static final long MAX_WORKER_EXECUTE_TIME_NS = TimeUnit.SECONDS.toNanos(2); // 2 seconds (in nanoseconds) max worker time
+    private static final int MESSAGE_INTERVAL_MS = 10000; // Send message every second
+    // Maximum duration in nanoseconds that any Vert.x thread (aka worker thread) can process a task before being flagged as blocked, triggering warnings
+    private static final long MAX_WORKER_EXECUTE_TIME_NS = TimeUnit.SECONDS.toNanos(2); 
     private static final int BLOCKED_THREAD_CHECK_INTERVAL_MS = 2000; // Check every second
     
     // Different ports for each Vertx instance
@@ -30,28 +31,54 @@ public class VertxApp {
         Vertx blockingVertx = Vertx.vertx(options);
 
         // Deploy MainVerticle on first instance
-        mainVertx.deployVerticle(new MainVerticle(), new DeploymentOptions().setConfig(new JsonObject().put("port", MAIN_VERTICLE_PORT)), res -> {
-            if (res.succeeded()) {
-                logger.info("MainVerticle deployed successfully on port {}", MAIN_VERTICLE_PORT);
+        // mainVertx.deployVerticle(new MainVerticle(), new DeploymentOptions().setConfig(new JsonObject().put("port", MAIN_VERTICLE_PORT)), res -> {
+        //     if (res.succeeded()) {
+        //         logger.info("MainVerticle deployed successfully on port {}", MAIN_VERTICLE_PORT);
                 
-                // Start sending messages periodically to MainVerticle
-                mainVertx.setPeriodic(MESSAGE_INTERVAL_MS, id -> {
-                    logger.info("Sending message to MainVerticle");
+        //         // Start sending messages periodically to MainVerticle
+        //         mainVertx.setPeriodic(MESSAGE_INTERVAL_MS, id -> {
+        //             logger.info("Sending message to MainVerticle");
+        //             long startTime = System.nanoTime();
+        //             mainVertx.eventBus().request("test.address", new JsonObject().put("message", "test message"), reply -> {
+        //                 long endTime = System.nanoTime();
+        //                 long durationMs = TimeUnit.NANOSECONDS.toMillis(endTime - startTime);
+                        
+        //                 if (reply.succeeded()) {
+        //                     JsonObject response = (JsonObject) reply.result().body();
+        //                     logger.info("Received response from MainVerticle in {} ms: {}", durationMs, response.getString("response"));
+        //                 } else {
+        //                     logger.error("Failed to get response from MainVerticle after {} ms", durationMs, reply.cause().getMessage());
+        //                 }
+        //             });
+        //         });
+        //     } else {
+        //         logger.error("Failed to deploy MainVerticle", res.cause());
+        //     }
+        // });
+
+        // Deploy MainVerticleWithBlocking on second instance
+        blockingVertx.deployVerticle(new MainVerticleWithBlocking(), new DeploymentOptions().setConfig(new JsonObject().put("port", BLOCKING_VERTICLE_PORT)), res -> {
+            if (res.succeeded()) {
+                logger.info("MainVerticleWithBlocking deployed successfully on port {}", BLOCKING_VERTICLE_PORT);
+                
+                // Start sending messages periodically to MainVerticleWithBlocking
+                blockingVertx.setPeriodic(MESSAGE_INTERVAL_MS, id -> {
+                    logger.info("Sending message to MainVerticleWithBlocking");
                     long startTime = System.nanoTime();
-                    mainVertx.eventBus().request("test.address", new JsonObject().put("message", "test message"), reply -> {
+                    blockingVertx.eventBus().request("test.address", new JsonObject().put("message", "test message"), reply -> {
                         long endTime = System.nanoTime();
                         long durationMs = TimeUnit.NANOSECONDS.toMillis(endTime - startTime);
                         
                         if (reply.succeeded()) {
                             JsonObject response = (JsonObject) reply.result().body();
-                            logger.info("Received response from MainVerticle in {} ms: {}", durationMs, response.getString("response"));
+                            logger.info("Received response from MainVerticleWithBlocking in {} ms: {}", durationMs, response.getString("response"));
                         } else {
-                            logger.error("Failed to get response from MainVerticle after {} ms", durationMs, reply.cause());
+                            logger.error("Failed to get response from MainVerticleWithBlocking after {} ms", durationMs, reply.cause());
                         }
                     });
                 });
             } else {
-                logger.error("Failed to deploy MainVerticle", res.cause());
+                logger.error("Failed to deploy MainVerticleWithBlocking", res.cause());
             }
         });
 
