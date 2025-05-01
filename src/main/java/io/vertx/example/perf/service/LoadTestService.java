@@ -4,6 +4,7 @@ import io.vertx.core.Vertx;
 import io.vertx.core.json.JsonObject;
 import io.vertx.example.perf.config.PerformanceToolConfig;
 import io.vertx.example.perf.model.LoadTest;
+import io.vertx.example.perf.util.ThreadPoolFactory;
 
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
@@ -20,20 +21,25 @@ public class LoadTestService {
     
     // Services and resources
     private final Vertx vertx;
-    private final ExecutorService executorService;
     private final HttpClientService httpClientService;
+    private final ThreadPoolFactory threadPoolFactory;
     
     /**
      * Creates a new load test service.
      * 
      * @param vertx Vert.x instance for async operations
-     * @param executorService Thread pool for executing load tests
+     * @param executorService Thread pool for executing load tests (ignored, managed by ThreadPoolFactory)
      * @param httpClientService Service for HTTP requests
      */
     public LoadTestService(Vertx vertx, ExecutorService executorService, HttpClientService httpClientService) {
         this.vertx = vertx;
-        this.executorService = executorService;
         this.httpClientService = httpClientService;
+        this.threadPoolFactory = ThreadPoolFactory.getInstance();
+        
+        // Set up thread pool monitoring if Vertx is available
+        if (vertx != null) {
+            threadPoolFactory.setupThreadPoolMonitoring(vertx);
+        }
     }
     
     /**
@@ -88,6 +94,9 @@ public class LoadTestService {
      * @param threadIndex Index of this thread within the test
      */
     private void executeThread(LoadTest loadTest, int threadIndex) {
+        // Get thread pool for this test
+        ExecutorService executorService = threadPoolFactory.getThreadPool(loadTest.getId(), loadTest.getThreads());
+        
         // Increment active thread counter as this thread starts
         loadTest.incrementActiveThreads();
         
@@ -128,6 +137,9 @@ public class LoadTestService {
             } finally {
                 // Decrement active thread counter when this thread completes
                 int remainingThreads = loadTest.decrementActiveThreads();
+                
+                // Notify ThreadPoolFactory that this thread has completed
+                threadPoolFactory.notifyThreadComplete(loadTest.getId());
                 
                 // If this was the last active thread, mark the test as completed
                 if (remainingThreads == 0) {
