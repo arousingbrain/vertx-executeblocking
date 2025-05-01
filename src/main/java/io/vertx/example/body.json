@@ -1,0 +1,12 @@
+{
+  "data": {
+    "id": "sample-data-123",
+    "type": "test-payload",
+    "attributes": {
+      "name": "Load Test Sample",
+      "description": "Sample payload for load testing",
+      "timestamp": "2023-07-15T12:00:00Z",
+      "value": 42
+    }
+  }
+} 
