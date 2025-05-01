@@ -28,7 +28,7 @@ import java.util.concurrent.atomic.AtomicLong;
  */
 public class PerfApp {
     // Load test configuration
-    private static final String TARGET_URL = "http://localhost:8080/api/test"; // Change as needed
+    private static final String TARGET_URL = "http://localhost:8123/"; // Change as needed
     private static final int THREADS = 10;
     private static final int RAMP_UP_PERIOD = 5; // seconds
     private static final int LOOP_COUNT = 100;
