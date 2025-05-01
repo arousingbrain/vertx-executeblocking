@@ -1,62 +1,65 @@
-# Vert.x Blocked Thread Demo
+# Performance Testing Applications
 
-This application demonstrates how Vert.x handles blocked threads and how to monitor them. It consists of two verticles:
-- `MainVerticle`: A non-blocking verticle that responds immediately
-- `MainVerticleWithBlocking`: A verticle that simulates a blocking operation
+This project contains two separate applications:
+1. PerfApp - A load testing application
+2. DummyServer - A simple HTTP server for testing
 
-## Setup
-
-1. Ensure you have Java 11+ and Maven installed
-2. Clone this repository
-3. Run the application:
-```bash
-mvn clean compile exec:java
+## Project Structure
+```
+.
+├── src/main/java/io/vertx/example/
+│   ├── PerfApp.java       # Load testing application
+│   ├── DummyServer.java   # Test HTTP server
+│   └── body.json         # Test payload for PerfApp
+├── pom.xml
+└── README.md
 ```
 
-## Log Files
+## Building the Applications
 
-The application creates two log files:
-- `log1.txt`: Logs from MainVerticle
-- `log2.txt`: Logs from MainVerticleWithBlocking
+Build both applications as fat JARs:
 
-## The Issue
+```bash
+mvn clean package
+```
 
-The application demonstrates a common issue in Vert.x applications: blocking operations in event loop threads. Here's what happens:
+This creates two JAR files in the `target` directory:
+- `target/perfapp.jar` - The load testing application
+- `target/dummyserver.jar` - The dummy HTTP server
 
-1. `MainVerticleWithBlocking` receives a message
-2. It simulates a blocking service call that takes X number of seconds to complete
-3. During this time, the thread is blocked
-4. Vert.x's `BlockedThreadChecker` detects this and logs warnings
+## Running the Applications
+
+### Running the Dummy Server
+
+```bash
+java -jar target/dummyserver.jar
+```
+
+The server will start on port 8123.
+
+### Running the Load Test Application
+
+1. First, ensure the `body.json` file is in the same directory as the JAR file:
+```bash
+cp src/main/java/io/vertx/example/body.json target/
+```
+
+2. Then run the load test:
+```bash
+cd target
+java -jar perfapp.jar
+```
 
 ## Configuration
 
-The application is configured with:
-- Blocked thread check interval: 2 second - Simulate how often BlockedThreadChecker logs blocked threads
-- Maximum worker execute time: 2 seconds - Simulate timeout of caller/client.
-- Blocking operation timeout: X seconds - Manually configured to demonstrate different times that will trigger the exception
+- DummyServer listens on port 8123 by default
+- PerfApp is configured to send requests to `http://localhost:8123/`
+- The load test parameters can be modified in the `PerfApp.java` source code:
+  - THREADS: Number of concurrent threads (default: 10)
+  - RAMP_UP_PERIOD: Seconds to ramp up threads (default: 5)
+  - LOOP_COUNT: Number of requests per thread (default: 100)
 
-## Monitoring
+## Requirements
 
-To monitor the logs in real-time:
-```bash
-# Monitor MainVerticle logs
-tail -f log1.txt
-
-# Monitor MainVerticleWithBlocking logs
-tail -f log2.txt
-
-# Monitor blocked thread warnings
-tail -f log3.txt
-```
-
-## Stopping the Application
-
-Press `Ctrl+C` to stop the application. The shutdown hook will properly close both Vert.x instances.
-
-## Best Practices
-
-This demo shows why you should:
-1. Avoid blocking operations in event loop threads
-2. Use `executeBlocking` for operations that might block
-3. Monitor blocked thread warnings in production
-4. Set appropriate timeouts for blocking operations 
+- Java 11 or higher
+- Maven 3.6 or higher 
