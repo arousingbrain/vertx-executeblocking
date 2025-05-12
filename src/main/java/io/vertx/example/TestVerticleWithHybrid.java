@@ -23,6 +23,7 @@ public class TestVerticleWithHybrid extends AbstractVerticle {
     private CircuitBreaker circuitBreaker;
     private ExecutorService soapExecutorService;
     
+    
     // Thread pool configuration
     // Core pool size matches CPU cores for baseline efficiency
     private static final int CORE_POOL_SIZE = 4;     // Matches k8s CPU cores
